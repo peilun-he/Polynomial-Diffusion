@@ -91,9 +91,9 @@ Pt_filter = [ sigma_chi^2 / (2*kappa_chi), sigma_chi*sigma_xi*rho / (kappa_chi +
 
 for i = 1: n_obs
     % Prediction step
-    [xt_prediction, J_state] = f(xt_filter, par); % J_state: Jacobian of f()
+    [xt_prediction, J_state] = func_f(xt_filter, par); % J_state: Jacobian of f()
     Pt_prediction = J_state * Pt_filter * J_state' + W;
-    [yt_prediction, J_measurement] = g(xt_prediction, par, mats(i, :), p_coordinate);
+    [yt_prediction, J_measurement] = func_g(xt_prediction, par, mats(i, :), p_coordinate);
     
     % Filter step
     Pxy = Pt_prediction * J_measurement';
