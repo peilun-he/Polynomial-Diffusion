@@ -1,16 +1,17 @@
-function [nll, ll_table, table_xt_filter, table_xt_prediction] = EKF3(par, yt, mats, dt, n_coe, model, noise)
+function [nll, ll_table, table_xt_filter, table_xt_prediction] = EKF3(par, yt, func_f, func_g, mats, n_coe, model, noise)
 
 % Extended Kalman Filter, for polynomial diffusion with degree 3. 
 % Ref: Eric Wan & Rudolph van der Merwe (2000)
 % Linear-quadratic state-space model: 
-%   X_t = A + B X_{t-1} + epsilon_t, epsilon_t ~ N(0, W)
-%   Y_t = C + D X_t + X_t' E X_t + eta_t, eta_t ~ N(0, V)
+%   X_t = f(X_{t-1}) + epsilon_t, epsilon_t ~ N(0, W)
+%   Y_t = g(X_t) + eta_t, eta_t ~ N(0, V)
 
 % Inputs: 
 %   par: a vector of parameters
 %   yt: futures prices
 %   mats: time to maturities
-%   dt: delta t
+%   func_f: function f(x), which should return two values, f(x) and f'(x)
+%   func_g: function g(x), which should return two values, g(x) and g'(x)
 %   n_coe: the number of model coefficient to be estimated 
 %   model: model: Full3 -> S_t = 1 + chi_t + xi_t + chi_t^2 + chi_t*xi_t + xi_t^2 + chi_t^3 + chi_t^2*xi_t + chi_t*xi_t^2 + xi_t^3
 %   noise: Gaussian -> Gaussian noise for both process and measurement noise
@@ -34,6 +35,12 @@ sigma_xi   = par(5);
 rho        = par(6);
 lambda_chi = par(7);
 lambda_xi  = par(8);
+
+if abs(mats(1, 1)) > 10^(-10)
+    dt = mats(1, 1) - mats(2, 1);
+else
+    dt = mats(2, 1) - mats(3, 1);
+end
 
 [n_obs, n_contract] = size(yt);
 n_state = 2;
@@ -64,11 +71,8 @@ elseif noise == "Gamma"
     W = [sigma_chi^2/(2*kappa_chi) * ( 1-exp(-2*kappa_chi*dt) ), rho*sigma_chi*sigma_xi/(kappa_chi+kappa_xi) * ( 1-exp(-(kappa_chi+kappa_xi)*dt) ); 
         rho*sigma_chi*sigma_xi/(kappa_chi+kappa_xi) * ( 1-exp(-(kappa_chi+kappa_xi)*dt) ), sigma_xi^2/(2*kappa_xi) * ( 1-exp(-2*kappa_xi*dt) )];
 else
-    error("Incorrect distribution of noises");
+    error("Incorrect distribution of noises. ");
 end
-
-A = [ 0; mu_xi / kappa_xi * ( 1-exp(-kappa_xi*dt) ) ]; 
-B = [ exp(-kappa_chi*dt), 0; 0, exp(-kappa_xi*dt) ];
 
 if model == "Full3"
     if n_coe == 10
@@ -79,18 +83,6 @@ if model == "Full3"
 else
     error("Incorrect model. ");
 end
-
-G = [0, -lambda_chi, mu_xi-lambda_xi,   sigma_chi^2,                   0,          sigma_xi^2,             0,                     0,                     0,                   0; 
-     0,  -kappa_chi,               0, -2*lambda_chi,     mu_xi-lambda_xi,                   0, 3*sigma_chi^2,                     0,            sigma_xi^2,                   0;
-     0,           0,       -kappa_xi,             0,         -lambda_chi, 2*mu_xi-2*lambda_xi,             0,           sigma_chi^2,                     0,        3*sigma_xi^2;
-     0,           0,               0,  -2*kappa_chi,                   0,                   0, -3*lambda_chi,       mu_xi-lambda_xi,                     0,                   0;
-     0,           0,               0,             0, -kappa_chi-kappa_xi,                   0,             0,         -2*lambda_chi,   2*mu_xi-2*lambda_xi,                   0; 
-     0,           0,               0,             0,                   0,         -2*kappa_xi,             0,                     0,           -lambda_chi, 3*mu_xi-3*lambda_xi;
-     0,           0,               0,             0,                   0,                   0,  -3*kappa_chi,                     0,                     0,                   0;
-     0,           0,               0,             0,                   0,                   0,             0, -2*kappa_chi-kappa_xi,                     0,                   0;
-     0,           0,               0,             0,                   0,                   0,             0,                     0, -kappa_chi-2*kappa_xi,                   0;
-     0,           0,               0,             0,                   0,                   0,             0,                     0,                     0,         -3*kappa_xi;
-     ];
  
 % Initialization
 xt_filter = [ 0 ; mu_xi / kappa_xi ]; % x_0|0
@@ -99,29 +91,18 @@ Pt_filter = [ sigma_chi^2 / (2*kappa_chi), sigma_chi*sigma_xi*rho / (kappa_chi +
 
 for i = 1: n_obs
     % Prediction step
-    xt_prediction = A + B * xt_filter;
-    Pt_prediction = B * Pt_filter * B' + W; 
-    Hx = [1, xt_prediction', xt_prediction(1, :)^2, xt_prediction(1, :) * xt_prediction(2, :), xt_prediction(2, :)^2, xt_prediction(1, :)^3, xt_prediction(1, :)^2 * xt_prediction(2, :), xt_prediction(1, :) * xt_prediction(2, :)^2, xt_prediction(2, :)^3];
-    exp_matG = zeros(10, 10, n_contract);
-    exp_matG_p = zeros(10, n_contract);
-    yt_prediction = zeros(1, n_contract);
-    J = zeros(n_contract, 2);
-    for j = 1: n_contract
-        exp_matG(:, :, j) = Decomposition_Eigen(mats(i, j)*G);
-        exp_matG_p(:, j) = exp_matG(:, :, j) * p_coordinate;
-        yt_prediction(j) = Hx * exp_matG(:, :, j) * p_coordinate;
-        J(j, 1) = exp_matG_p(2, j) + [2*exp_matG_p(4, j), exp_matG_p(5, j)] * xt_prediction + xt_prediction' * [3*exp_matG_p(7, j), exp_matG_p(8, j); exp_matG_p(8, j), exp_matG_p(9, j)] * xt_prediction;
-        J(j, 2) = exp_matG_p(3, j) + [exp_matG_p(5, j), 2*exp_matG_p(6, j)] * xt_prediction + xt_prediction' * [exp_matG_p(8, j), exp_matG_p(9, j); exp_matG_p(9, j), 3*exp_matG_p(10, j)] * xt_prediction;
-    end
+    [xt_prediction, J_state] = f(xt_filter, par); % J_state: Jacobian of f()
+    Pt_prediction = J_state * Pt_filter * J_state' + W;
+    [yt_prediction, J_measurement] = g(xt_prediction, par, mats(i, :), p_coordinate);
     
     % Filter step
-    Pxy = Pt_prediction * J';
-    Pyy = J * Pt_prediction * J' + V;
+    Pxy = Pt_prediction * J_measurement';
+    Pyy = J_measurement * Pt_prediction * J_measurement' + V;
     K = Pxy / Pyy; % K = Pxy * inv(Pyy)
     et = yt(i, :) - yt_prediction;
     xt_filter = xt_prediction + K * et'; 
-    Pt_filter = (eye(2) - K * J) * Pt_prediction;
-    %Pt_filter = (eye(2) - K * J) * Pt_prediction * (eye(2) - K * J)' + K * V * K'; % Joseph covariance update
+    Pt_filter = (eye(2) - K * J_measurement) * Pt_prediction;
+    %Pt_filter = (eye(2) - K * J_measurement) * Pt_prediction * (eye(2) - K * J_measurement)' + K * V * K'; % Joseph covariance update
     
     % Update tables
     table_xt_filter(i, :) = xt_filter;
