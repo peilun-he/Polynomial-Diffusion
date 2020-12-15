@@ -53,6 +53,18 @@ for i = 1: n_par
                 else
                     error("Incorrect filtering method. ");
                 end
+            elseif model == "Full3"
+                if filter == "EKF"
+                    [~, ll_table1, ~, ~] = EKF3(par + incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
+                    [~, ll_table2, ~, ~] = EKF3(par, yt, mats, dt, n_coe, model, noise); 
+                    [~, ll_table3, ~, ~] = EKF3(par - incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
+                elseif filter == "UKF"
+                    [~, ll_table1, ~, ~] = UKF3(par + incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
+                    [~, ll_table2, ~, ~] = UKF3(par, yt, mats, dt, n_coe, model, noise); 
+                    [~, ll_table3, ~, ~] = UKF3(par - incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
+                else
+                    error("Incorrect filtering method. ");
+                end
             else 
                 error("Incorrect model. ");
             end
@@ -78,6 +90,20 @@ for i = 1: n_par
                 else
                     error("Incorrect filtering method. ");
                 end
+            elseif model == "Full3"
+                if filter == "EKF"
+                    [~, ll_table1, ~, ~] = EKF3(par + incre_mat(i, :) + incre_mat(j, :), yt, mats, dt, n_coe, model, noise);
+                    [~, ll_table2, ~, ~] = EKF3(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, dt, n_coe, model, noise); 
+                    [~, ll_table3, ~, ~] = EKF3(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, dt, n_coe, model, noise); 
+                    [~, ll_table4, ~, ~] = EKF3(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, dt, n_coe, model, noise);
+                elseif filter == "UKF"
+                    [~, ll_table1, ~, ~] = UKF3(par + incre_mat(i, :) + incre_mat(j, :), yt, mats, dt, n_coe, model, noise);
+                    [~, ll_table2, ~, ~] = UKF3(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, dt, n_coe, model, noise); 
+                    [~, ll_table3, ~, ~] = UKF3(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, dt, n_coe, model, noise); 
+                    [~, ll_table4, ~, ~] = UKF3(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, dt, n_coe, model, noise);
+                else
+                     error("Incorrect filtering method. ");
+                end
             else
                 error("Incorrect model. ");
             end
@@ -96,6 +122,16 @@ for i = 1: n_par
         elseif filter == "UKF"
             [~, ll_table5, ~, ~] = UKF(par + incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
             [~, ll_table6, ~, ~] = UKF(par - incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
+        else
+            error("Incorrect filtering method. ");
+        end
+    elseif model == "Full3"
+        if filter == "EKF"
+            [~, ll_table5, ~, ~] = EKF3(par + incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
+            [~, ll_table6, ~, ~] = EKF3(par - incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
+        elseif filter == "UKF"
+            [~, ll_table5, ~, ~] = UKF3(par + incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
+            [~, ll_table6, ~, ~] = UKF3(par - incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
         else
             error("Incorrect filtering method. ");
         end
