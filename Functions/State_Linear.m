@@ -1,4 +1,4 @@
-function [fx, Jx] = Linear_State(x, par)
+function [fx, Jx] = State_Linear(x, par)
 
 % Linear state equation, x_t = f(x_{t-1}) = A + B x_{t-1}
 % Inputs: 
