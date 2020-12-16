@@ -63,7 +63,7 @@ for i = 1: n_point
     Jy = zeros(n_contract, 2);
 
     for j = 1: n_contract
-        exp_matG(:, :, j) = Decomposition_Eigen(mats(:, j)*G);
+        exp_matG(:, :, j) = Decomposition_Eigen(mats(i, j)*G);
         exp_matG_p(:, j) = exp_matG(:, :, j) * p_coordinate;
         y(i, j) = Hx * exp_matG(:, :, j) * p_coordinate;
         J(j, 1, i) = exp_matG_p(2, j) + [2*exp_matG_p(4, j), exp_matG_p(5, j)] * xt_prediction + xt_prediction' * [3*exp_matG_p(7, j), exp_matG_p(8, j); exp_matG_p(8, j), exp_matG_p(9, j)] * xt_prediction;
