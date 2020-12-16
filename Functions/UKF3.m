@@ -1,18 +1,18 @@
-function [nll, ll_table, table_xt_filter, table_xt_prediction] = UKF3(par, yt, mats, dt, n_coe, model, noise)
+function [nll, ll_table, table_xt_filter, table_xt_prediction] = UKF3(par, yt, mats, func_f, func_g, n_coe, noise)
 
 % Unscented Kalman Filter, for polynomial diffusion with degree 3. 
 % Ref: Eric Wan & Rudolph van der Merwe (2000)
 % Linear-quadratic state-space model: 
-%   X_t = A + B X_{t-1} + C epsilon_t, CC' = W, epsilon_t ~ N(0, 1)
-%   Y_t = D + E X_t + \sum_{k=1}^m e_k X_t' F_k X_t + G eta_t, GG' = V, eta_t ~ N(0, 1)
+%   X_t = f(X_{t-1}) + epsilon_t, epsilon_t ~ N(0, W)
+%   Y_t = g(X_t) + eta_t, eta_t ~ N(0, V)
 
 % Inputs: 
 %   par: a vector of parameters
 %   yt: futures prices
 %   mats: time to maturities
-%   dt: delta t
-%`  n_coe: the number of model coefficient to be estimated 
-%   model: Full3 -> S_t = 1 + chi_t + xi_t + chi_t^2 + chi_t*xi_t + xi_t^2 + chi_t^3 + chi_t^2*xi_t + chi_t*xi_t^2 + xi_t^3
+%   func_f: function f(x), which should return two values, f(x) and f'(x)
+%   func_g: function g(x), which should return two values, g(x) and g'(x)
+%   n_coe: the number of model coefficient to be estimated 
 %   noise: Gaussian -> Gaussian noise for both process and measurement noise
 %          Gamma -> Gaussian process noise and Gamma measurement noise
 % Outputs:
@@ -21,10 +21,8 @@ function [nll, ll_table, table_xt_filter, table_xt_prediction] = UKF3(par, yt, m
 %   table_xt_filter: filtered state variable
 %   table_xt_prediction: predicted state variable
 
-if n_coe ~= 0
-    par_coe = par(end - n_coe + 1: end); % coefficient parameters
-    par = par(1: end - n_coe); % model parameters
-end
+par_all = par; % model parameters and model coefficients
+par = par(1: end - n_coe); % model parameters
 
 kappa_chi  = par(1);
 kappa_xi   = par(2);
@@ -34,6 +32,12 @@ sigma_xi   = par(5);
 rho        = par(6);
 lambda_chi = par(7);
 lambda_xi  = par(8);
+
+if abs(mats(1, 1)) > 10^(-10)
+    dt = mats(1, 1) - mats(2, 1);
+else
+    dt = mats(2, 1) - mats(3, 1);
+end
 
 [n_obs, n_contract] = size(yt);
 n_state = 2;
@@ -55,6 +59,7 @@ if noise == "Gaussian"
     else
         error("Incorrect number of standard errors. ");
     end
+    
     W = [sigma_chi^2/(2*kappa_chi) * ( 1-exp(-2*kappa_chi*dt) ), rho*sigma_chi*sigma_xi/(kappa_chi+kappa_xi) * ( 1-exp(-(kappa_chi+kappa_xi)*dt) ); 
         rho*sigma_chi*sigma_xi/(kappa_chi+kappa_xi) * ( 1-exp(-(kappa_chi+kappa_xi)*dt) ), sigma_xi^2/(2*kappa_xi) * ( 1-exp(-2*kappa_xi*dt) )];
 elseif noise == "Gamma"
@@ -65,31 +70,6 @@ elseif noise == "Gamma"
 else
     error("Incorrect distribution of noises");
 end
-
-A = [ 0; mu_xi / kappa_xi * ( 1-exp(-kappa_xi*dt) ) ]; 
-B = [ exp(-kappa_chi*dt), 0; 0, exp(-kappa_xi*dt) ];
-
-if model == "Full3"
-    if n_coe == 10
-        p_coordinate = par_coe(1: 10)';
-    else
-        error("Incorrect number of coefficient. ");
-    end
-else
-    error("Incorrect model. ");
-end
-
-G = [0, -lambda_chi, mu_xi-lambda_xi,   sigma_chi^2,                   0,          sigma_xi^2,             0,                     0,                     0,                   0; 
-     0,  -kappa_chi,               0, -2*lambda_chi,     mu_xi-lambda_xi,                   0, 3*sigma_chi^2,                     0,            sigma_xi^2,                   0;
-     0,           0,       -kappa_xi,             0,         -lambda_chi, 2*mu_xi-2*lambda_xi,             0,           sigma_chi^2,                     0,        3*sigma_xi^2;
-     0,           0,               0,  -2*kappa_chi,                   0,                   0, -3*lambda_chi,       mu_xi-lambda_xi,                     0,                   0;
-     0,           0,               0,             0, -kappa_chi-kappa_xi,                   0,             0,         -2*lambda_chi,   2*mu_xi-2*lambda_xi,                   0; 
-     0,           0,               0,             0,                   0,         -2*kappa_xi,             0,                     0,           -lambda_chi, 3*mu_xi-3*lambda_xi;
-     0,           0,               0,             0,                   0,                   0,  -3*kappa_chi,                     0,                     0,                   0;
-     0,           0,               0,             0,                   0,                   0,             0, -2*kappa_chi-kappa_xi,                     0,                   0;
-     0,           0,               0,             0,                   0,                   0,             0,                     0, -kappa_chi-2*kappa_xi,                   0;
-     0,           0,               0,             0,                   0,                   0,             0,                     0,                     0,         -3*kappa_xi;
-     ];
 
 % Initialization
 xt_filter = [ 0 ; mu_xi / kappa_xi ]; % x_0|0
@@ -119,17 +99,13 @@ for i = 1: n_obs
     SP = [xt_filter, xt_filter + chol( ( n_state + lambda ) * Pt_filter )', xt_filter - chol( ( n_state + lambda ) * Pt_filter )']; % each column forms a sigma point   
 
     % Prediction step
-    SPx_prediction = A + B * SP; % 2*(2*n_state+1) matrix
-    xt_prediction = weight_mean * SPx_prediction'; % 1*2 matrix
+    [SPx_prediction, ~] = func_f(SP, par); % 2*(2*n_state+1) matrix
+    xt_prediction = SPx_prediction * weight_mean'; % 2*1 matrix
     Pt_prediction = W; % 2*2 matrix
     for j = 1: 2*n_state+1
-        Pt_prediction = Pt_prediction + weight_cov(j) * (SPx_prediction(:, j) - xt_prediction') * (SPx_prediction(:, j) - xt_prediction')'; 
+        Pt_prediction = Pt_prediction + weight_cov(j) * (SPx_prediction(:, j) - xt_prediction) * (SPx_prediction(:, j) - xt_prediction)'; 
     end
-    Hx = [repelem(1, 2*n_state+1); SPx_prediction(1, :); SPx_prediction(2, :); SPx_prediction(1, :).^2; SPx_prediction(1, :) .* SPx_prediction(2, :); SPx_prediction(2, :).^2; SPx_prediction(1, :).^3; SPx_prediction(1, :).^2 .* SPx_prediction(2, :); SPx_prediction(1, :) .* SPx_prediction(2, :).^2; SPx_prediction(2, :).^3]'; % H(x) = [1, chi, xi, chi^2, chi*xi, xi^2, chi^3, chi^2*xi, chi*xi^2, xi^3], (2*n_state+1)*10 matrix    
-    SPy_prediction = zeros(2*n_state+1, n_contract); % (2*n_state+1)*n_contract matrix
-    for k = 1: n_contract
-        SPy_prediction(:, k) = Hx * Decomposition_Eigen(mats(i, k)*G) * p_coordinate; % (2*n_state+1)*n_obs matrix
-    end
+    [SPy_prediction, ~] = func_g(SPx_prediction, par_all, mats(i, :)); % (2*n_state+1)*n_contract matrix
     yt_prediction = weight_mean * SPy_prediction; % 1*n_contract matrix
     
     % Filter step
@@ -137,11 +113,11 @@ for i = 1: n_obs
     Pxy = 0; % 2*n_contract
     for j = 1: 2*n_state+1
         Pyy = Pyy + weight_cov(j) * (SPy_prediction(j, :) - yt_prediction)' * (SPy_prediction(j, :) - yt_prediction);
-        Pxy = Pxy + weight_cov(j) * (SPx_prediction(:, j) - xt_prediction') * (SPy_prediction(j, :) - yt_prediction);
+        Pxy = Pxy + weight_cov(j) * (SPx_prediction(:, j) - xt_prediction) * (SPy_prediction(j, :) - yt_prediction);
     end
     K = Pxy / Pyy; % n_state * n_contract matrix
     et = yt(i, :) - yt_prediction;
-    xt_filter = xt_prediction' + K * et';
+    xt_filter = xt_prediction + K * et';
     Pt_filter = Pt_prediction - K * Pyy * K';
     %Pt_filter = Pt_prediction - Pxy * K' - K * Pxy' + K * Pyy * K'; % Joseph covariance update
     
