@@ -22,10 +22,8 @@ function [nll, ll_table, table_xt_filter, table_xt_prediction] = EKF3(par, yt, f
 %   table_xt_filter: filtered state variable
 %   table_xt_prediction: predicted state variable
 
-if n_coe ~= 0
-    par_coe = par(end - n_coe + 1: end); % coefficient parameters
-    par = par(1: end - n_coe); % model parameters
-end
+par_all = par; % model parameters and model coefficients
+par = par(1: end - n_coe); % model parameters
 
 kappa_chi  = par(1);
 kappa_xi   = par(2);
@@ -73,16 +71,6 @@ elseif noise == "Gamma"
 else
     error("Incorrect distribution of noises. ");
 end
-
-if model == "Full3"
-    if n_coe == 10
-        p_coordinate = par_coe(1: 10)';
-    else
-        error("Incorrect number of coefficient. ");
-    end
-else
-    error("Incorrect model. ");
-end
  
 % Initialization
 xt_filter = [ 0 ; mu_xi / kappa_xi ]; % x_0|0
@@ -93,7 +81,7 @@ for i = 1: n_obs
     % Prediction step
     [xt_prediction, J_state] = func_f(xt_filter, par); % J_state: Jacobian of f()
     Pt_prediction = J_state * Pt_filter * J_state' + W;
-    [yt_prediction, J_measurement] = func_g(xt_prediction, par, mats(i, :), p_coordinate);
+    [yt_prediction, J_measurement] = func_g(xt_prediction, par, mats(i, :));
     
     % Filter step
     Pxy = Pt_prediction * J_measurement';
