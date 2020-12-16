@@ -25,7 +25,7 @@ rho        = par(6);
 lambda_chi = par(7);
 lambda_xi  = par(8);
 
-n_contract = length(mats);
+n_contract = size(mats, 2);
 n_point = size(x, 2); % number of points
 
 if model == "Full3"
