@@ -59,8 +59,6 @@ for i = 1: n_point
     Hx = [1, chi, xi, chi^2, chi * xi, xi^2, chi^3, chi^2 * xi, chi * xi^2, xi^3];
     exp_matG = zeros(10, 10, n_contract);
     exp_matG_p = zeros(10, n_contract);
-    y = zeros(1, n_contract);
-    Jy = zeros(n_contract, 2);
 
     for j = 1: n_contract
         exp_matG(:, :, j) = Decomposition_Eigen(mats(i, j)*G);
