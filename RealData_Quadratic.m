@@ -58,7 +58,6 @@ end
 
 yeardays = sum(total_days(2: 13));
 monthdays = round(mean(total_days(2: 13)), 0);
-dt = 1 / yeardays;
 mats0 = mats0 / yeardays;
 
 first = find(date >= datetime(2011, 1, 1));
@@ -71,6 +70,12 @@ yt = price(first(1): last(end), contracts);
 mats = mats0(first(1): last(end), contracts);
 yt_forecasting = price(first_forecasting(1): last_forecasting(end), 1: 66);
 mats_forecasting = mats0(first_forecasting(1): last_forecasting(end), 1: 66);
+
+if abs(mats(1, 1)) > 10^(-10)
+    dt = mats(1, 1) - mats(2, 1);
+else
+    dt = mats(2, 1) - mats(3, 1);
+end
 
 delivery_time = delivery_time(first(1): last(end), :);
 [n_obs, n_contract] = size(yt);
@@ -112,7 +117,7 @@ noise = "Gaussian";
 n_se = 13; % number of standard errors
 n_coe = 10; % number of model coefficients
 
-func_f = @State_Linear; 
+func_f = @(xt, par) State_Linear(xt, par, dt); 
 func_g = @(xt, par, mats) Measurement_Polynomial3(xt, par, mats, n_coe, model);  
 filter = @UKF3;
 
