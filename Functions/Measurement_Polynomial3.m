@@ -1,14 +1,20 @@
-function [y, Jy]= Measurement_Polynomial3(x, par, mats, p_coordinate)
+function [y, Jy]= Measurement_Polynomial3(x, par, mats, n_coe, model)
 
 % Polynomial measurement equation with degree 3
 % Inputs: 
 %   x: x_t
-%   par: a vector of parameters
+%   par: a vector of parameters and model coefficients
 %   mats: maturities
-%   p_coordinate: coordinate vector
+%   n_coe: the number of model coefficients
+%   model: Full3 -> S_t = 1 + chi_t + xi_t + chi_t^2 + chi_t*xi_t + xi_t^2 + chi_t^3 + chi_t^2*xi_t + chi_t*xi_t^2 + xi_t^3
 % Outputs:
 %   y: y_t
 %   Jy: Jacobian 
+
+if n_coe ~= 0
+    par_coe = par(end - n_coe + 1: end); % model coefficients
+    par = par(1: end - n_coe); % model parameters
+end
 
 kappa_chi  = par(1);
 kappa_xi   = par(2);
@@ -20,6 +26,16 @@ lambda_chi = par(7);
 lambda_xi  = par(8);
 
 n_contract = length(mats);
+
+if model == "Full3"
+    if n_coe == 10
+        p_coordinate = par_coe(1: 10)';
+    else
+        error("Incorrect number of coefficient. ");
+    end
+else
+    error("Incorrect model. ");
+end
 
 G = [0, -lambda_chi, mu_xi-lambda_xi,   sigma_chi^2,                   0,          sigma_xi^2,             0,                     0,                     0,                   0; 
      0,  -kappa_chi,               0, -2*lambda_chi,     mu_xi-lambda_xi,                   0, 3*sigma_chi^2,                     0,            sigma_xi^2,                   0;
