@@ -80,7 +80,7 @@ for i = 1: n_obs
     % Prediction step
     [xt_prediction, J_state] = func_f(xt_filter, par); % J_state: Jacobian of f()
     Pt_prediction = J_state * Pt_filter * J_state' + W;
-    [yt_prediction, J_measurement] = func_g(xt_prediction, par, mats(i, :));
+    [yt_prediction, J_measurement] = func_g(xt_prediction, par_all, mats(i, :));
     
     % Filter step
     Pxy = Pt_prediction * J_measurement';
