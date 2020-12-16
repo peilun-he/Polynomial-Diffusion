@@ -64,8 +64,8 @@ for i = 1: n_point
         exp_matG(:, :, j) = Decomposition_Eigen(mats(i, j)*G);
         exp_matG_p(:, j) = exp_matG(:, :, j) * p_coordinate;
         y(i, j) = Hx * exp_matG(:, :, j) * p_coordinate;
-        Jy(j, 1, i) = exp_matG_p(2, j) + [2*exp_matG_p(4, j), exp_matG_p(5, j)] * xt_prediction + xt_prediction' * [3*exp_matG_p(7, j), exp_matG_p(8, j); exp_matG_p(8, j), exp_matG_p(9, j)] * xt_prediction;
-        Jy(j, 2, i) = exp_matG_p(3, j) + [exp_matG_p(5, j), 2*exp_matG_p(6, j)] * xt_prediction + xt_prediction' * [exp_matG_p(8, j), exp_matG_p(9, j); exp_matG_p(9, j), 3*exp_matG_p(10, j)] * xt_prediction;
+        Jy(j, 1, i) = exp_matG_p(2, j) + [2*exp_matG_p(4, j), exp_matG_p(5, j)] * x(:, i) + x(:, i)' * [3*exp_matG_p(7, j), exp_matG_p(8, j); exp_matG_p(8, j), exp_matG_p(9, j)] * x(:, i);
+        Jy(j, 2, i) = exp_matG_p(3, j) + [exp_matG_p(5, j), 2*exp_matG_p(6, j)] * x(:, i) + x(:, i)' * [exp_matG_p(8, j), exp_matG_p(9, j); exp_matG_p(9, j), 3*exp_matG_p(10, j)] * x(:, i);   
     end
 end
 
