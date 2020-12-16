@@ -1,4 +1,4 @@
-function [nll, ll_table, table_xt_filter, table_xt_prediction] = EKF3(par, yt, func_f, func_g, mats, n_coe, model, noise)
+function [nll, ll_table, table_xt_filter, table_xt_prediction] = EKF3(par, yt, mats, func_f, func_g, n_coe, noise)
 
 % Extended Kalman Filter, for polynomial diffusion with degree 3. 
 % Ref: Eric Wan & Rudolph van der Merwe (2000)
@@ -13,7 +13,6 @@ function [nll, ll_table, table_xt_filter, table_xt_prediction] = EKF3(par, yt, f
 %   func_f: function f(x), which should return two values, f(x) and f'(x)
 %   func_g: function g(x), which should return two values, g(x) and g'(x)
 %   n_coe: the number of model coefficient to be estimated 
-%   model: model: Full3 -> S_t = 1 + chi_t + xi_t + chi_t^2 + chi_t*xi_t + xi_t^2 + chi_t^3 + chi_t^2*xi_t + chi_t*xi_t^2 + xi_t^3
 %   noise: Gaussian -> Gaussian noise for both process and measurement noise
 %          Gamma -> Gaussian process noise and Gamma measurement noise
 % Outputs:
