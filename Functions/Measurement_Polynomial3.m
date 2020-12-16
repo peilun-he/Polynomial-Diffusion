@@ -26,6 +26,7 @@ lambda_chi = par(7);
 lambda_xi  = par(8);
 
 n_contract = length(mats);
+n_point = size(x, 2); % number of points
 
 if model == "Full3"
     if n_coe == 10
@@ -48,19 +49,25 @@ G = [0, -lambda_chi, mu_xi-lambda_xi,   sigma_chi^2,                   0,       
      0,           0,               0,             0,                   0,                   0,             0,                     0, -kappa_chi-2*kappa_xi,                   0;
      0,           0,               0,             0,                   0,                   0,             0,                     0,                     0,         -3*kappa_xi;
      ];
-     
-Hx = [1, x', x(1, :)^2, x(1, :) * x(2, :), x(2, :)^2, x(1, :)^3, x(1, :)^2 * x(2, :), x(1, :) * x(2, :)^2, x(2, :)^3];
-exp_matG = zeros(10, 10, n_contract);
-exp_matG_p = zeros(10, n_contract);
-y = zeros(1, n_contract);
-Jy = zeros(n_contract, 2);
 
-for j = 1: n_contract
-    exp_matG(:, :, j) = Decomposition_Eigen(mats(:, j)*G);
-    exp_matG_p(:, j) = exp_matG(:, :, j) * p_coordinate;
-    yt_prediction(j) = Hx * exp_matG(:, :, j) * p_coordinate;
-    J(j, 1) = exp_matG_p(2, j) + [2*exp_matG_p(4, j), exp_matG_p(5, j)] * xt_prediction + xt_prediction' * [3*exp_matG_p(7, j), exp_matG_p(8, j); exp_matG_p(8, j), exp_matG_p(9, j)] * xt_prediction;
-    J(j, 2) = exp_matG_p(3, j) + [exp_matG_p(5, j), 2*exp_matG_p(6, j)] * xt_prediction + xt_prediction' * [exp_matG_p(8, j), exp_matG_p(9, j); exp_matG_p(9, j), 3*exp_matG_p(10, j)] * xt_prediction;
+y = zeros(n_point, n_contract); 
+Jy = zeros(n_contract, 2, n_point);
+
+for i = 1: n_point
+    chi = x(1, i);
+    xi = x(2, i);
+    Hx = [1, chi, xi, chi^2, chi * xi, xi^2, chi^3, chi^2 * xi, chi * xi^2, xi^3];
+    exp_matG = zeros(10, 10, n_contract);
+    exp_matG_p = zeros(10, n_contract);
+    y = zeros(1, n_contract);
+    Jy = zeros(n_contract, 2);
+
+    for j = 1: n_contract
+        exp_matG(:, :, j) = Decomposition_Eigen(mats(:, j)*G);
+        exp_matG_p(:, j) = exp_matG(:, :, j) * p_coordinate;
+        y(i, j) = Hx * exp_matG(:, :, j) * p_coordinate;
+        J(j, 1, i) = exp_matG_p(2, j) + [2*exp_matG_p(4, j), exp_matG_p(5, j)] * xt_prediction + xt_prediction' * [3*exp_matG_p(7, j), exp_matG_p(8, j); exp_matG_p(8, j), exp_matG_p(9, j)] * xt_prediction;
+        J(j, 2, i) = exp_matG_p(3, j) + [exp_matG_p(5, j), 2*exp_matG_p(6, j)] * xt_prediction + xt_prediction' * [exp_matG_p(8, j), exp_matG_p(9, j); exp_matG_p(9, j), 3*exp_matG_p(10, j)] * xt_prediction;
+    end
 end
-
 
