@@ -177,7 +177,7 @@ best_init = init(index, :);
 
 % Asymptotic Variance
 increment = 10^(-5);
-[asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, dt, increment, n_coe, model, "UKF", noise);
+[asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, func_f, func_g, increment, n_coe, model, filter, noise);
 se = sqrt(diag(asyVar));
 
 %% Forecasting error
