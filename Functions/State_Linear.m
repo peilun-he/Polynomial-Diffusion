@@ -1,4 +1,4 @@
-function [fx, Jx] = State_Linear(x, par)
+function [fx, Jx] = State_Linear(x, par, dt)
 
 % Linear state equation, x_t = f(x_{t-1}) = A + B x_{t-1}
 % Inputs: 
@@ -16,6 +16,12 @@ sigma_xi   = par(5);
 rho        = par(6);
 lambda_chi = par(7);
 lambda_xi  = par(8);
+
+if abs(mats(1, 1)) > 10^(-10)
+    dt = mats(1, 1) - mats(2, 1);
+else
+    dt = mats(2, 1) - mats(3, 1);
+end
 
 A = [ 0; mu_xi / kappa_xi * ( 1-exp(-kappa_xi*dt) ) ]; 
 B = [ exp(-kappa_chi*dt), 0; 0, exp(-kappa_xi*dt) ];
