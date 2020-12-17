@@ -105,7 +105,7 @@ for i = 1: n_obs
     for j = 1: 2*n_state+1
         Pt_prediction = Pt_prediction + weight_cov(j) * (SPx_prediction(:, j) - xt_prediction) * (SPx_prediction(:, j) - xt_prediction)'; 
     end
-    [SPy_prediction, ~] = func_g(SPx_prediction, par_all, repmat(mats(i, :), 2*n_state+1, 1)); % (2*n_state+1)*n_contract matrix
+    [SPy_prediction, ~] = func_g(SPx_prediction, par_all, mats(i, :)); % (2*n_state+1)*n_contract matrix
     yt_prediction = weight_mean * SPy_prediction; % 1*n_contract matrix
     
     % Filter step
