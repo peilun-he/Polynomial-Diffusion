@@ -1,4 +1,4 @@
-function [y, Jy]= Measurement_Polynomial3(x, par, mats, n_coe, model)
+function [y, Jy]= Measurement_Polynomial2(x, par, mats, n_coe, model)
 
 % Polynomial measurement equation with degree 2
 % Inputs: 
