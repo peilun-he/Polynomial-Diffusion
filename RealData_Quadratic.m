@@ -60,10 +60,10 @@ yeardays = sum(total_days(2: 13));
 monthdays = round(mean(total_days(2: 13)), 0);
 mats0 = mats0 / yeardays;
 
-first = find(date >= datetime(2011, 1, 1));
-last  = find(date <= datetime(2014, 12, 31));
-first_forecasting = find(date >= datetime(2011, 1, 1));
-last_forecasting = find(date <= datetime(2014, 12, 31)); 
+first = find(date >= datetime(2015, 1, 1));
+last  = find(date <= datetime(2018, 12, 31));
+first_forecasting = find(date >= datetime(2015, 1, 1));
+last_forecasting = find(date <= datetime(2019, 12, 31)); 
 
 contracts = 1: 13;
 yt = price(first(1): last(end), contracts);
