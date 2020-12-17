@@ -62,8 +62,8 @@ if size(mats, 1) == 1 && n_point == 1
         exp_matG = Decomposition_Eigen(mats(:, j)*G);
         exp_matG_p = exp_matG * p_coordinate;
         y(:, j) = Hx * exp_matG * p_coordinate;
-        Jy(j, 1) = exp_matG_p(2, j) + [2*exp_matG_p(4, j), exp_matG_p(5, j)] * x + x' * [3*exp_matG_p(7, j), exp_matG_p(8, j); exp_matG_p(8, j), exp_matG_p(9, j)] * x;
-        Jy(j, 2) = exp_matG_p(3, j) + [exp_matG_p(5, j), 2*exp_matG_p(6, j)] * x + x' * [exp_matG_p(8, j), exp_matG_p(9, j); exp_matG_p(9, j), 3*exp_matG_p(10, j)] * x;   
+        Jy(j, 1) = exp_matG_p(2) + [2*exp_matG_p(4), exp_matG_p(5)] * x + x' * [3*exp_matG_p(7), exp_matG_p(8); exp_matG_p(8), exp_matG_p(9)] * x;
+        Jy(j, 2) = exp_matG_p(3) + [exp_matG_p(5), 2*exp_matG_p(6)] * x + x' * [exp_matG_p(8), exp_matG_p(9); exp_matG_p(9), 3*exp_matG_p(10)] * x;   
     end
 elseif size(mats, 1) == 1 && n_point > 1
     Jy = 0;
