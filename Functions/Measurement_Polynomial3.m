@@ -51,21 +51,33 @@ G = [0, -lambda_chi, mu_xi-lambda_xi,   sigma_chi^2,                   0,       
      ];
 
 y = zeros(n_point, n_contract); 
-Jy = zeros(n_contract, 2, n_point);
 
-for i = 1: n_point
-    chi = x(1, i);
-    xi = x(2, i);
-    Hx = [1, chi, xi, chi^2, chi * xi, xi^2, chi^3, chi^2 * xi, chi * xi^2, xi^3];
-    exp_matG = zeros(10, 10, n_contract);
-    exp_matG_p = zeros(10, n_contract);
+chi = x(1, :);
+xi = x(2, :);
+Hx = [repelem(1, n_point); chi; xi; chi.^2; chi .* xi; xi.^2; chi.^3; chi.^2 .* xi; chi .* xi.^2; xi.^3]';
 
+if size(mats, 1) == 1 && n_point == 1
+    Jy = zeros(n_contract, 2);    
     for j = 1: n_contract
-        exp_matG(:, :, j) = Decomposition_Eigen(mats(i, j)*G);
-        exp_matG_p(:, j) = exp_matG(:, :, j) * p_coordinate;
-        y(i, j) = Hx * exp_matG(:, :, j) * p_coordinate;
-        Jy(j, 1, i) = exp_matG_p(2, j) + [2*exp_matG_p(4, j), exp_matG_p(5, j)] * x(:, i) + x(:, i)' * [3*exp_matG_p(7, j), exp_matG_p(8, j); exp_matG_p(8, j), exp_matG_p(9, j)] * x(:, i);
-        Jy(j, 2, i) = exp_matG_p(3, j) + [exp_matG_p(5, j), 2*exp_matG_p(6, j)] * x(:, i) + x(:, i)' * [exp_matG_p(8, j), exp_matG_p(9, j); exp_matG_p(9, j), 3*exp_matG_p(10, j)] * x(:, i);   
+        exp_matG = Decomposition_Eigen(mats(:, j)*G);
+        exp_matG_p = exp_matG * p_coordinate;
+        y(:, j) = Hx * exp_matG * p_coordinate;
+        Jy(j, 1) = exp_matG_p(2, j) + [2*exp_matG_p(4, j), exp_matG_p(5, j)] * x + x' * [3*exp_matG_p(7, j), exp_matG_p(8, j); exp_matG_p(8, j), exp_matG_p(9, j)] * x;
+        Jy(j, 2) = exp_matG_p(3, j) + [exp_matG_p(5, j), 2*exp_matG_p(6, j)] * x + x' * [exp_matG_p(8, j), exp_matG_p(9, j); exp_matG_p(9, j), 3*exp_matG_p(10, j)] * x;   
+    end
+elseif size(mats, 1) == 1 && n_point > 1
+    Jy = 0;
+    for j = 1: n_contract
+        exp_matG = Decomposition_Eigen(mats(:, j)*G);
+        y(:, j) = Hx * exp_matG * p_coordinate;  
+    end
+else
+    Jy = 0;   
+    for i = 1: n_point
+        for j = 1: n_contract
+            exp_matG = Decomposition_Eigen(mats(i, j)*G);
+            y(i, j) = Hx * exp_matG * p_coordinate;
+        end
     end
 end
 
