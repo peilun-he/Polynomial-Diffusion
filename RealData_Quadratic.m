@@ -175,8 +175,10 @@ parfor i = 1: n_grid^n_para
     end
 end
 
-est(est(:, end) == 0, :) = [];
-index = ( est(:, end) == min(est(:, end)) );
+error_index = est(:, end) == 0;
+est(error_index, :) = [];
+init(error_index, :) = [];
+index = est(:, end) == min(est(:, end));
 best_est = est(index, :);
 best_init = init(index, :);
 
