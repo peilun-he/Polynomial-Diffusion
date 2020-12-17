@@ -89,7 +89,7 @@ if size(mats, 1) == 1 && n_point == 1
         E = [exp_matG_p(4, :), 0.5*exp_matG_p(5, :); 0.5*exp_matG_p(5, :), exp_matG_p(6, :)];
         
         y(:, j) = Hx * exp_matG * p_coordinate;
-        Jy(J,  :) = D + 2 * E * x;   
+        Jy(j,  :) = D + 2 * E * x;   
     end
 elseif size(mats, 1) == 1 && n_point > 1
     Jy = 0;
