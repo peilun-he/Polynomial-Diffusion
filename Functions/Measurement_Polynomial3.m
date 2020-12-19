@@ -31,6 +31,8 @@ n_point = size(x, 2); % number of points
 if model == "Full3"
     if n_coe == 10
         p_coordinate = par_coe(1: 10)';
+    elseif n_coe == 0
+        p_coordinate = [1, 1, 1, 0.5, 1, 0.5, 1/6, 0.5, 0.5, 1/6]';
     else
         error("Incorrect number of coefficient. ");
     end
