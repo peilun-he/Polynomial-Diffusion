@@ -1,4 +1,4 @@
-function [nll, ll_table, table_xt_filter, table_xt_prediction] = EKF3(par, yt, mats, func_f, func_g, n_coe, noise)
+function [nll, ll_table, table_xt_filter, table_xt_prediction] = EKF3(par, yt, mats, func_f, func_g, dt, n_coe, noise)
 
 % Extended Kalman Filter, for polynomial diffusion with degree 3. 
 % Ref: Eric Wan & Rudolph van der Merwe (2000)
@@ -12,6 +12,7 @@ function [nll, ll_table, table_xt_filter, table_xt_prediction] = EKF3(par, yt, m
 %   mats: time to maturities
 %   func_f: function f(x), which should return two values, f(x) and f'(x)
 %   func_g: function g(x), which should return two values, g(x) and g'(x)
+%   dt: delta t
 %   n_coe: the number of model coefficient to be estimated 
 %   noise: Gaussian -> Gaussian noise for both process and measurement noise
 %          Gamma -> Gaussian process noise and Gamma measurement noise
@@ -32,12 +33,6 @@ sigma_xi   = par(5);
 rho        = par(6);
 lambda_chi = par(7);
 lambda_xi  = par(8);
-
-if abs(mats(1, 1)) > 10^(-10)
-    dt = mats(1, 1) - mats(2, 1);
-else
-    dt = mats(2, 1) - mats(3, 1);
-end
 
 [n_obs, n_contract] = size(yt);
 n_state = 2;
@@ -80,7 +75,7 @@ for i = 1: n_obs
     % Prediction step
     [xt_prediction, J_state] = func_f(xt_filter, par); % J_state: Jacobian of f()
     Pt_prediction = J_state * Pt_filter * J_state' + W;
-    [yt_prediction, J_measurement] = func_g(xt_prediction, par_all, mats(i, :));
+    [yt_prediction, J_measurement] = func_g(xt_prediction, par_all, mats(i, :)); % J_measurement: Jacobian of g()
     
     % Filter step
     Pxy = Pt_prediction * J_measurement';
