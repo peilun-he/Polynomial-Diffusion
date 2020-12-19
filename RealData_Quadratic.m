@@ -58,6 +58,7 @@ end
 
 yeardays = sum(total_days(2: 13));
 monthdays = round(mean(total_days(2: 13)), 0);
+dt = 1 / yeardays;
 mats0 = mats0 / yeardays;
 
 first = find(date >= datetime(2015, 1, 1));
@@ -70,12 +71,6 @@ yt = price(first(1): last(end), contracts);
 mats = mats0(first(1): last(end), contracts);
 yt_forecasting = price(first_forecasting(1): last_forecasting(end), 1: 66);
 mats_forecasting = mats0(first_forecasting(1): last_forecasting(end), 1: 66);
-
-if abs(mats(1, 1)) > 10^(-10)
-    dt = mats(1, 1) - mats(2, 1);
-else
-    dt = mats(2, 1) - mats(3, 1);
-end
 
 delivery_time = delivery_time(first(1): last(end), :);
 [n_obs, n_contract] = size(yt);
@@ -121,13 +116,16 @@ func_f = @(xt, par) State_Linear(xt, par, dt);
 func_g = @(xt, par, mats) Measurement_Polynomial3(xt, par, mats, n_coe, model);  
 filter = @UKF3;
 
-% Bounds
+% Bounds and constraints
 parL = [10^(-5), 10^(-5),   -10,   0.01,   0.01,  -0.9999, -10, -10, repelem(10^(-5), n_se), repelem(-10, n_coe)];
 parU = [      3,       3,    10,     10,     10,   0.9999,  10,  10,       repelem(1, n_se),  repelem(10, n_coe)];
-A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe)];
+A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe)]; % A*x <= b
 b = 0;
 Aeq = []; % Equal constraints: Aeq*x=beq
 beq = []; 
+c = @(x) []; % non-linear constraints: c(x) <= 0
+ceq = @(x) []; % non-linear equal constraints: ceq(x) = 0
+nlcon = @(x, yt, mats, func_f, func_g, dt, n_coe, noise) deal(c(x), ceq(x)); % non-linear constraints
 
 % Grid search
 mid = (parL + parU) / 2;
@@ -168,7 +166,7 @@ parfor i = 1: n_grid^n_para
     par0 =  init(i, :);
     options = optimset('TolFun',1e-06,'TolX',1e-06,'MaxIter',1000,'MaxFunEvals',2000);
     try
-        [par, fval, exitflag] = fmincon(filter, par0, A, b, Aeq, beq, parL, parU, @Const_v2, options, yt, mats, func_f, func_g, n_coe, noise);
+        [par, fval, exitflag] = fmincon(filter, par0, A, b, Aeq, beq, parL, parU, nlcon, options, yt, mats, func_f, func_g, dt, n_coe, noise);
         est(i, :) = [par, fval];
     catch
         est(i, :) = zeros(1, length(parL)+1);
@@ -184,11 +182,11 @@ best_init = init(index, :);
 
 % Asymptotic Variance
 increment = 10^(-5);
-[asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, func_f, func_g, increment, n_coe, model, filter, noise);
+[asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, func_f, func_g, increment, dt, n_coe, model, filter, noise);
 se = sqrt(diag(asyVar));
 
 %% Forecasting error
-[~, ~, xf, ~] = filter(best_est(1: end-1), yt_forecasting(:, contracts), mats_forecasting(:, contracts), func_f, func_g, n_coe, noise);
+[~, ~, xf, ~] = filter(best_est(1: end-1), yt_forecasting(:, contracts), mats_forecasting(:, contracts), func_f, func_g, dt, n_coe, noise);
 
 [yf, ~] = Measurement_Polynomial3(xf', best_est(1: end-1), mats_forecasting, n_coe, model);
 
