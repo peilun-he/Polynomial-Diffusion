@@ -1,4 +1,4 @@
-function [nll, ll_table, table_xt_filter, table_xt_prediction] = UKF3(par, yt, mats, func_f, func_g, n_coe, noise)
+function [nll, ll_table, table_xt_filter, table_xt_prediction] = UKF3(par, yt, mats, func_f, func_g, dt, n_coe, noise)
 
 % Unscented Kalman Filter, for polynomial diffusion with degree 3. 
 % Ref: Eric Wan & Rudolph van der Merwe (2000)
@@ -32,12 +32,6 @@ sigma_xi   = par(5);
 rho        = par(6);
 lambda_chi = par(7);
 lambda_xi  = par(8);
-
-if abs(mats(1, 1)) > 10^(-10)
-    dt = mats(1, 1) - mats(2, 1);
-else
-    dt = mats(2, 1) - mats(3, 1);
-end
 
 [n_obs, n_contract] = size(yt);
 n_state = 2;
