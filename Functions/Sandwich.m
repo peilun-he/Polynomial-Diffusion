@@ -1,4 +1,4 @@
-function [asyVar, message] = Sandwich(par, yt, mats, func_f, func_g, increment, n_coe, model, filter, noise)
+function [asyVar, message] = Sandwich(par, yt, mats, func_f, func_g, increment, dt, n_coe, model, filter, noise)
 
 % Calculate Sandwich variances of estimates of parameters. 
 % Inputs: 
@@ -43,9 +43,9 @@ for i = 1: n_par
                 [~, ll_table2, ~, ~, ~, ~, ~] = KalmanFilter(par, yt, mats, 0, dt, false, "None");
                 [~, ll_table3, ~, ~, ~, ~, ~] = KalmanFilter(par - incre_mat(i, :), yt, mats, 0, dt, false, "None");
             elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua" || model == "Full3"
-                [~, ll_table1, ~, ~] = filter(par + incre_mat(i, :), yt, mats, func_f, func_g, n_coe, noise);
-                [~, ll_table2, ~, ~] = filter(par, yt, mats, func_f, func_g, n_coe, noise); 
-                [~, ll_table3, ~, ~] = filter(par - incre_mat(i, :), yt, mats, func_f, func_g, n_coe, noise);
+                [~, ll_table1, ~, ~] = filter(par + incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
+                [~, ll_table2, ~, ~] = filter(par, yt, mats, func_f, func_g, dt, n_coe, noise); 
+                [~, ll_table3, ~, ~] = filter(par - incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
             else 
                 error("Incorrect model. ");
             end
@@ -58,10 +58,10 @@ for i = 1: n_par
                 [~, ll_table3, ~, ~, ~, ~, ~] = KalmanFilter(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, 0, dt, false, "None");
                 [~, ll_table4, ~, ~, ~, ~, ~] = KalmanFilter(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, 0, dt, false, "None");
             elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua" || model == "Full3"
-                [~, ll_table1, ~, ~] = filter(par + incre_mat(i, :) + incre_mat(j, :), yt, mats, func_f, func_g, n_coe, noise);
-                [~, ll_table2, ~, ~] = filter(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, func_f, func_g, n_coe, noise); 
-                [~, ll_table3, ~, ~] = filter(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, func_f, func_g, n_coe, noise); 
-                [~, ll_table4, ~, ~] = filter(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, func_f, func_g, n_coe, noise);
+                [~, ll_table1, ~, ~] = filter(par + incre_mat(i, :) + incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise);
+                [~, ll_table2, ~, ~] = filter(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise); 
+                [~, ll_table3, ~, ~] = filter(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise); 
+                [~, ll_table4, ~, ~] = filter(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise);
             else
                 error("Incorrect model. ");
             end
@@ -74,8 +74,8 @@ for i = 1: n_par
         [~, ll_table5, ~, ~, ~, ~, ~] = KalmanFilter(par + incre_mat(i, :), yt, mats, 0, dt, false, "None"); 
         [~, ll_table6, ~, ~, ~, ~, ~] = KalmanFilter(par - incre_mat(i, :), yt, mats, 0, dt, false, "None");
     elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua" || model == "Full3"
-        [~, ll_table5, ~, ~] = filter(par + incre_mat(i, :), yt, mats, func_f, func_g, n_coe, noise);
-        [~, ll_table6, ~, ~] = filter(par - incre_mat(i, :), yt, mats, func_f, func_g, n_coe, noise);
+        [~, ll_table5, ~, ~] = filter(par + incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
+        [~, ll_table6, ~, ~] = filter(par - incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
     else
         error("Incorrect model. ");
     end
