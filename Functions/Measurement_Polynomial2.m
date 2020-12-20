@@ -102,7 +102,7 @@ else
     for i = 1: n_point
         for j = 1: n_contract
             exp_matG = Decomposition_Eigen(mats(i, j)*G);
-            y(i, j) = Hx * exp_matG * p_coordinate;
+            y(i, j) = Hx(i, :) * exp_matG * p_coordinate;
         end
     end
 end
