@@ -91,7 +91,7 @@ if length(par) == 9
     V = diag( repelem(par(9).^2, n) );
 elseif length(par) == 11 && n == 13
     V = diag( [repelem(par(9).^2, 5), repelem(par(10).^2, 4), repelem(par(11).^2, 4)] );
-elseif length(par) == 21 && n_contract == 13
+elseif length(par) == 21 && n == 13
     V = diag( par(9: end).^2 );
 else
     error("Incorrect number of standard errors. ");
