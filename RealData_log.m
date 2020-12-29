@@ -143,7 +143,9 @@ best_init = initial(index, :);
 
 % Asymptotic variance
 increment = 10^(-5);
-[asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, dt, increment, 0, "SS2000", "None", "None");
+func_f = 0;
+func_g = 0;
+[asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, func_f, func_g, increment, dt, 0, "SS2000", "None", "None");
 se = sqrt(diag(asyVar));
 
 time = toc;
