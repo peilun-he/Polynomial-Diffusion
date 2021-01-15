@@ -61,10 +61,10 @@ monthdays = round(mean(total_days(2: 13)), 0);
 dt = 1 / yeardays;
 mats0 = mats0 / yeardays;
 
-first = find(date >= datetime(2011, 1, 1));
-last  = find(date <= datetime(2014, 12, 31));
-first_forecasting = find(date >= datetime(2011, 1, 1));
-last_forecasting = find(date <= datetime(2014, 12, 31)); 
+first = find(date >= datetime(2015, 1, 1));
+last  = find(date <= datetime(2018, 12, 31));
+first_forecasting = find(date >= datetime(2015, 1, 1));
+last_forecasting = find(date <= datetime(2019, 12, 31)); 
 
 contracts = 1: 13;
 yt = price(first(1): last(end), contracts);
@@ -78,7 +78,15 @@ delivery_time = delivery_time(first(1): last(end), :);
 
 %% Clustering analysis
 rng(1111);
-[idx,C,sumd,d,midx,info] = kmedoids(yt_forecasting(:, 1: 13)', 2, "Algorithm", "clara");
+error = zeros(1, 12);
+for k = 2: 13
+    [idx,C,sumd,d,midx,info] = kmedoids(yt_forecasting(:, 1: 13)', k, "Algorithm", "clara");
+    error(k-1) = mean(sumd);
+end
+
+plot(2: 13, error);
+xlabel("Number of clusters");
+ylabel("Mean distance");
 
 %yt_forecasting_cluster1 = yt_forecasting;
 %yt_forecasting_cluster1(idx ~= 1, :) = NaN;
@@ -99,18 +107,25 @@ rng(1111);
 n_grid = 2;
 n_para = 8;
 s = 1111;
-model = "Full-Qua";
+model = "Full3";
 noise = "Gaussian";
 n_se = 13; % number of standard errors
-n_coe = 6; % number of model coefficients
+n_coe = 10; % number of model coefficients
 
-% Bounds
+func_f = @(xt, par) State_Linear(xt, par, dt); 
+func_g = @(xt, par, mats) Measurement_Polynomial3(xt, par, mats, n_coe, model);  
+filter = @UKF3;
+
+% Bounds and constraints
 parL = [10^(-5), 10^(-5),   -10,   0.01,   0.01,  -0.9999, -10, -10, repelem(10^(-5), n_se), repelem(-10, n_coe)];
 parU = [      3,       3,    10,     10,     10,   0.9999,  10,  10,       repelem(1, n_se),  repelem(10, n_coe)];
-A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe)];
+A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe)]; % A*x <= b
 b = 0;
 Aeq = []; % Equal constraints: Aeq*x=beq
 beq = []; 
+c = @(x) []; % non-linear constraints: c(x) <= 0
+ceq = @(x) []; % non-linear equal constraints: ceq(x) = 0
+nlcon = @(x, yt, mats, func_f, func_g, dt, n_coe, noise) deal(c(x), ceq(x)); % non-linear constraints
 
 % Grid search
 mid = (parL + parU) / 2;
@@ -151,96 +166,32 @@ parfor i = 1: n_grid^n_para
     par0 =  init(i, :);
     options = optimset('TolFun',1e-06,'TolX',1e-06,'MaxIter',1000,'MaxFunEvals',2000);
     try
-        [par, fval, exitflag] = fmincon(@UKF, par0, A, b, Aeq, beq, parL, parU, @Const_v2, options, yt, mats, dt, n_coe, model, noise);
+        [par, fval, exitflag] = fmincon(filter, par0, A, b, Aeq, beq, parL, parU, nlcon, options, yt, mats, func_f, func_g, dt, n_coe, noise);
         est(i, :) = [par, fval];
     catch
         est(i, :) = zeros(1, length(parL)+1);
     end
 end
 
-est(est(:, end) == 0, :) = [];
-index = ( est(:, end) == min(est(:, end)) );
+error_index = est(:, end) == 0;
+est(error_index, :) = [];
+init(error_index, :) = [];
+index = est(:, end) == min(est(:, end));
 best_est = est(index, :);
 best_init = init(index, :);
 
 % Asymptotic Variance
 increment = 10^(-5);
-[asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, dt, increment, n_coe, model, "UKF", noise);
+[asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, func_f, func_g, increment, dt, n_coe, model, filter, noise);
 se = sqrt(diag(asyVar));
 
-%save("RealData_Forecasting_20110101_20181231_Quadratic_UKF")
-
 %% Forecasting error
-[~, ~, xf, ~] = UKF(best_est(1: end-1), yt_forecasting(:, contracts), mats_forecasting(:, contracts), dt, n_coe, model, noise);
+[~, ~, xf, ~] = filter(best_est(1: end-1), yt_forecasting(:, contracts), mats_forecasting(:, contracts), func_f, func_g, dt, n_coe, noise);
 
-kappa_chi = best_est(1);
-kappa_xi = best_est(2);
-mu_xi = best_est(3);
-sigma_chi = best_est(4); 
-sigma_xi = best_est(5);
-rho = best_est(6); 
-lambda_chi = best_est(7);
-lambda_xi = best_est(8);
-
-par_coe = best_est(end - n_coe: end - 1);
-
-if model == "Quadratic"
-    if n_coe == 2
-        p_coordinate = [0, 0, 0, par_coe(1), 0, par_coe(2)]';
-    elseif n_coe == 0
-        p_coordinate = [0, 0, 0, 1, 0, 1]';
-    else
-        error("Incorrect number of coefficient. ");
-    end
-elseif model == "Lin-Qua"
-    if n_coe == 4
-        p_coordinate = [0, par_coe(1), par_coe(2), par_coe(3), 0, par_coe(4)]';
-    elseif n_coe == 0
-        p_coordinate = [0, 1, 1, 1, 0, 1]';
-    else
-        error("Incorrect number of coefficient. ");
-    end
-elseif model == "Mixed"
-    if n_coe == 3
-        p_coordinate = [0, 0, 0, par_coe(1), par_coe(2), par_coe(3)]';
-    elseif n_coe == 0
-        p_coordinate = [0, 0, 0, 1, 2, 1]';
-    else
-        error("Incorrect number of coefficient. ");
-    end
-elseif model == "Full-Qua"
-    if n_coe == 6
-        p_coordinate = [par_coe(1), par_coe(2), par_coe(3), par_coe(4), par_coe(5), par_coe(6)]';
-    elseif n_coe == 0
-        p_coordinate = [1, 1, 1, 0.5, 1, 0.5]';
-    else
-        error("Incorrect number of coefficient. ");
-    end
-else
-    error("Incorrect model. ");
-end
-
-G_est = [0, -lambda_chi, mu_xi-lambda_xi,   sigma_chi^2,                   0,          sigma_xi^2; 
-         0,  -kappa_chi,               0, -2*lambda_chi,     mu_xi-lambda_xi,                   0;
-         0,           0,       -kappa_xi,             0,         -lambda_chi, 2*mu_xi-2*lambda_xi;
-         0,           0,               0,  -2*kappa_chi,                   0,                   0;
-         0,           0,               0,             0, -kappa_chi-kappa_xi,                   0; 
-         0,           0,               0,             0,                   0,         -2*kappa_xi];
-
-Hx = [repelem(1, n_obs_forecasting)', xf, xf(:, 1).^2, xf(:, 1) .* xf(:, 2), xf(:, 2).^2];
-yf = zeros(n_obs_forecasting, n_contract_forecasting);
-
-for i = 1: n_obs_forecasting
-    for k = 1: n_contract_forecasting
-        exp_G = Decomposition_Eigen(mats_forecasting(i, k)*G_est);
-        yf(i, k) = Hx(i, :) * exp_G * p_coordinate;
-    end    
-end
+[yf, ~] = Measurement_Polynomial3(xf', best_est(1: end-1), mats_forecasting, n_coe, model);
 
 rmse_f_in = sqrt( mean( (yf(1: n_obs, :) - yt_forecasting(1: n_obs, :)).^2 ) ); % in-sample RMSE
 rmse_f_out = sqrt( mean( (yf(n_obs+1: end, :) - yt_forecasting(n_obs+1: end, :)).^2 ) ); % out-of-sample RMSE
-
-%save("RealData_20140101_20180101_EKF");
 
 %%
 date_in_sample = date(first(1): last(end));

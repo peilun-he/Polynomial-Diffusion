@@ -80,7 +80,7 @@ delivery_time = delivery_time(first(1): last(end), :);
 n_grid = 2;
 n_para = 8;
 s = 1111;
-n_se = 3; % number of standard errors
+n_se = 13; % number of standard errors
 
 % Bounds
 parL = [10^(-5), 10^(-5),   -10,   0.01,   0.01,  -0.9999, -10, -10, repelem(10^(-5), n_se)];
@@ -133,7 +133,7 @@ parfor i = 1: n_grid^n_para
     i
     par0 = initial(i, :);
     options = optimset('TolFun',1e-06,'TolX',1e-06,'MaxIter',1000,'MaxFunEvals',2000);
-    [par, fval, exitflag] = fmincon(@KalmanFilter, par0, A, b, Aeq, beq, parL, parU, @Const_v2, options, yt, mats, delivery_time, dt, false, "None");
+    [par, fval, exitflag] = fmincon(@SKF, par0, A, b, Aeq, beq, parL, parU, @Const_v2, options, yt, mats, delivery_time, dt, false, "None");
     est(i, :) = [par, fval];
 end
 
@@ -143,7 +143,9 @@ best_init = initial(index, :);
 
 % Asymptotic variance
 increment = 10^(-5);
-[asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, dt, increment, 0, "SS2000", "None", "None");
+func_f = 0;
+func_g = 0;
+[asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, func_f, func_g, increment, dt, 0, "SS2000", "None", "None");
 se = sqrt(diag(asyVar));
 
 time = toc;

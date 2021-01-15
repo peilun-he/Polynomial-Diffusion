@@ -1,11 +1,12 @@
-function [asyVar, message] = Sandwich(par, yt, mats, dt, increment, n_coe, model, filter, noise)
+function [asyVar, message] = Sandwich(par, yt, mats, func_f, func_g, increment, dt, n_coe, model, filter, noise)
 
 % Calculate Sandwich variances of estimates of parameters. 
 % Inputs: 
 %   par: a vector of estimates of parameters
 %   yt: data
 %   mats: time to maturities 
-%   dt: delta t
+%   func_f: function f(x), which should return two values, f(x) and f'(x)
+%   func_g: function g(x), which should return two values, g(x) and g'(x)
 %   increment: the increment to calculate first / second order derivatives numerically
 %`  n_coe: the number of model coefficient to be estimated 
 %   model: SS2000 -> log(S_t) = chi_t + xi_t
@@ -13,8 +14,8 @@ function [asyVar, message] = Sandwich(par, yt, mats, dt, increment, n_coe, model
 %          Lin-Qua -> S_t = chi_t^2 + xi_t^2 + chi_t + xi_t
 %          Mixed -> S_t = chi_t^2 + xi_t^2 + 2*chi_t*xi_t
 %          Full-Qua -> S_t = 1 + chi_t + xi_t + 0.5*chi_t^2 + chi_t*xi_t + 0.5*xi_t^2
-%   filter: EKF -> Extendend Kalman Filter
-%           UKF -> Unscented Kalman Filter
+%          Full3 -> S_t = 1 + chi_t + xi_t + chi_t^2 + chi_t*xi_t + xi_t^2 + chi_t^3 + chi_t^2*xi_t + chi_t*xi_t^2 + xi_t^3
+%   filter: filtering function
 %   noise: Gaussian -> Gaussian noise for both process and measurement noise
 %          Gamma -> Gaussian process noise and Gamma measurement noise
 % Outputs:
@@ -38,21 +39,13 @@ for i = 1: n_par
         j
         if i == j
             if model == "SS2000"
-                [~, ll_table1, ~, ~, ~, ~, ~] = KalmanFilter(par + incre_mat(i, :), yt, mats, 0, dt, false, "None"); 
-                [~, ll_table2, ~, ~, ~, ~, ~] = KalmanFilter(par, yt, mats, 0, dt, false, "None");
-                [~, ll_table3, ~, ~, ~, ~, ~] = KalmanFilter(par - incre_mat(i, :), yt, mats, 0, dt, false, "None");
-            elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua"
-                if filter == "EKF"
-                    [~, ll_table1, ~, ~] = EKF(par + incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
-                    [~, ll_table2, ~, ~] = EKF(par, yt, mats, dt, n_coe, model, noise); 
-                    [~, ll_table3, ~, ~] = EKF(par - incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
-                elseif filter == "UKF"
-                    [~, ll_table1, ~, ~] = UKF(par + incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
-                    [~, ll_table2, ~, ~] = UKF(par, yt, mats, dt, n_coe, model, noise); 
-                    [~, ll_table3, ~, ~] = UKF(par - incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
-                else
-                    error("Incorrect filtering method. ");
-                end
+                [~, ll_table1, ~, ~, ~, ~] = SKF(par + incre_mat(i, :), yt, mats, 0, dt, false, "None"); 
+                [~, ll_table2, ~, ~, ~, ~] = SKF(par, yt, mats, 0, dt, false, "None");
+                [~, ll_table3, ~, ~, ~, ~] = SKF(par - incre_mat(i, :), yt, mats, 0, dt, false, "None");
+            elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua" || model == "Full3"
+                [~, ll_table1, ~, ~] = filter(par + incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
+                [~, ll_table2, ~, ~] = filter(par, yt, mats, func_f, func_g, dt, n_coe, noise); 
+                [~, ll_table3, ~, ~] = filter(par - incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
             else 
                 error("Incorrect model. ");
             end
@@ -60,24 +53,15 @@ for i = 1: n_par
             ll_derivative2(i, j, :) = (ll_table1 - 2 * ll_table2 + ll_table3) / (incre(i)^2);
         else            
             if model == "SS2000"
-                [~, ll_table1, ~, ~, ~, ~, ~] = KalmanFilter(par + incre_mat(i, :) + incre_mat(j, :), yt, mats, 0, dt, false, "None"); 
-                [~, ll_table2, ~, ~, ~, ~, ~] = KalmanFilter(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, 0, dt, false, "None");
-                [~, ll_table3, ~, ~, ~, ~, ~] = KalmanFilter(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, 0, dt, false, "None");
-                [~, ll_table4, ~, ~, ~, ~, ~] = KalmanFilter(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, 0, dt, false, "None");
-            elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua"
-                if filter == "EKF"
-                    [~, ll_table1, ~, ~] = EKF(par + incre_mat(i, :) + incre_mat(j, :), yt, mats, dt, n_coe, model, noise);
-                    [~, ll_table2, ~, ~] = EKF(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, dt, n_coe, model, noise); 
-                    [~, ll_table3, ~, ~] = EKF(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, dt, n_coe, model, noise); 
-                    [~, ll_table4, ~, ~] = EKF(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, dt, n_coe, model, noise);
-                elseif filter == "UKF"
-                    [~, ll_table1, ~, ~] = UKF(par + incre_mat(i, :) + incre_mat(j, :), yt, mats, dt, n_coe, model, noise);
-                    [~, ll_table2, ~, ~] = UKF(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, dt, n_coe, model, noise); 
-                    [~, ll_table3, ~, ~] = UKF(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, dt, n_coe, model, noise); 
-                    [~, ll_table4, ~, ~] = UKF(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, dt, n_coe, model, noise);
-                else
-                    error("Incorrect filtering method. ");
-                end
+                [~, ll_table1, ~, ~, ~, ~] = SKF(par + incre_mat(i, :) + incre_mat(j, :), yt, mats, 0, dt, false, "None"); 
+                [~, ll_table2, ~, ~, ~, ~] = SKF(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, 0, dt, false, "None");
+                [~, ll_table3, ~, ~, ~, ~] = SKF(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, 0, dt, false, "None");
+                [~, ll_table4, ~, ~, ~, ~] = SKF(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, 0, dt, false, "None");
+            elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua" || model == "Full3"
+                [~, ll_table1, ~, ~] = filter(par + incre_mat(i, :) + incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise);
+                [~, ll_table2, ~, ~] = filter(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise); 
+                [~, ll_table3, ~, ~] = filter(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise); 
+                [~, ll_table4, ~, ~] = filter(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise);
             else
                 error("Incorrect model. ");
             end
@@ -87,18 +71,11 @@ for i = 1: n_par
     end
     
     if model == "SS2000"
-        [~, ll_table5, ~, ~, ~, ~, ~] = KalmanFilter(par + incre_mat(i, :), yt, mats, 0, dt, false, "None"); 
-        [~, ll_table6, ~, ~, ~, ~, ~] = KalmanFilter(par - incre_mat(i, :), yt, mats, 0, dt, false, "None");
-    elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua"
-        if filter == "EKF"
-            [~, ll_table5, ~, ~] = EKF(par + incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
-            [~, ll_table6, ~, ~] = EKF(par - incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
-        elseif filter == "UKF"
-            [~, ll_table5, ~, ~] = UKF(par + incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
-            [~, ll_table6, ~, ~] = UKF(par - incre_mat(i, :), yt, mats, dt, n_coe, model, noise);
-        else
-            error("Incorrect filtering method. ");
-        end
+        [~, ll_table5, ~, ~, ~, ~] = SKF(par + incre_mat(i, :), yt, mats, 0, dt, false, "None"); 
+        [~, ll_table6, ~, ~, ~, ~] = SKF(par - incre_mat(i, :), yt, mats, 0, dt, false, "None");
+    elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua" || model == "Full3"
+        [~, ll_table5, ~, ~] = filter(par + incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
+        [~, ll_table6, ~, ~] = filter(par - incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
     else
         error("Incorrect model. ");
     end
