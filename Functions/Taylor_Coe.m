@@ -9,14 +9,14 @@ function [coe] = Taylor_Coe(order)
 coe = 1;
 
 if order == 0
-  return
+    return
 else
-  for s = 1: order
-    for i = s: -1: 0
-      j = s - i;
-      coe = [coe, 1 / (factorial(i) * factorial(j))];
+    for s = 1: order
+        for i = s: -1: 0
+            j = s - i;
+            coe = [coe, 1 / (factorial(i) * factorial(j))];
+        end
     end
-  end
 end
 
 
