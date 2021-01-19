@@ -48,7 +48,8 @@ for s = 1: degree
         j = s - i;
         Hx = [Hx; chi.^i .* xi.^j];
     end
-end          
+end
+Hx = Hx';
 
 if size(mats, 1) == 1 && n_point == 1
     Jy = zeros(n_contract, 2); 
@@ -58,9 +59,9 @@ if size(mats, 1) == 1 && n_point == 1
         y(:, j) = Hx * exp_matG * p_coordinate;
         for s = 1: degree
             for i = s: -1: 0
-                j = s - i;
-                Jy(j, 1) = Jy(j, 1) + i .* exp_matG_p(s*(s+1)/2+j+1) .* chi.^(i-1) .* xi.^j;
-                Jy(j, 2) = Jy(j, 2) + j .* exp_matG_p(s*(s+1)/2+j+1) .* chi.^i .* xi.^(j-1);
+                k = s - i;
+                Jy(j, 1) = Jy(j, 1) + i .* exp_matG_p(s*(s+1)/2+k+1) .* chi.^(i-1) .* xi.^k;
+                Jy(j, 2) = Jy(j, 2) + k .* exp_matG_p(s*(s+1)/2+k+1) .* chi.^i .* xi.^(k-1);
             end
         end
     end
