@@ -111,9 +111,10 @@ model = "Full3";
 noise = "Gaussian";
 n_se = 13; % number of standard errors
 n_coe = 10; % number of model coefficients
+degree = 2; % degree of polynomial
 
 func_f = @(xt, par) State_Linear(xt, par, dt); 
-func_g = @(xt, par, mats) Measurement_Polynomial3(xt, par, mats, n_coe, model);  
+func_g = @(xt, par, mats) Measurement_Polynomial(xt, par, mats, degree, n_coe);  
 filter = @UKF3;
 
 % Bounds and constraints
@@ -188,7 +189,7 @@ se = sqrt(diag(asyVar));
 %% Forecasting error
 [~, ~, xf, ~] = filter(best_est(1: end-1), yt_forecasting(:, contracts), mats_forecasting(:, contracts), func_f, func_g, dt, n_coe, noise);
 
-[yf, ~] = Measurement_Polynomial3(xf', best_est(1: end-1), mats_forecasting, n_coe, model);
+[yf, ~] = Measurement_Polynomial(xf', best_est(1: end-1), mats_forecasting, degree, n_coe);
 
 rmse_f_in = sqrt( mean( (yf(1: n_obs, :) - yt_forecasting(1: n_obs, :)).^2 ) ); % in-sample RMSE
 rmse_f_out = sqrt( mean( (yf(n_obs+1: end, :) - yt_forecasting(n_obs+1: end, :)).^2 ) ); % out-of-sample RMSE
