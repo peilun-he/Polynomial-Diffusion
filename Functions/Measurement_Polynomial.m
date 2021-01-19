@@ -50,19 +50,25 @@ for s = 1: degree
     end
 end          
 
-
-
-
-
+for s = 1: degree
+    for i = s: -1: 0
+        Jy
+    end
+end
 
 if size(mats, 1) == 1 && n_point == 1
-    Jy = zeros(n_contract, 2);    
+    Jy = zeros(n_contract, 2); 
     for j = 1: n_contract
         exp_matG = Decomposition_Eigen(mats(:, j)*G);
         exp_matG_p = exp_matG * p_coordinate;
         y(:, j) = Hx * exp_matG * p_coordinate;
-        Jy(j, 1) = exp_matG_p(2) + [2*exp_matG_p(4), exp_matG_p(5)] * x + x' * [3*exp_matG_p(7), exp_matG_p(8); exp_matG_p(8), exp_matG_p(9)] * x; % change this line
-        Jy(j, 2) = exp_matG_p(3) + [exp_matG_p(5), 2*exp_matG_p(6)] * x + x' * [exp_matG_p(8), exp_matG_p(9); exp_matG_p(9), 3*exp_matG_p(10)] * x; % change this line 
+        for s = 1: degree
+            for i = s: -1: 0
+                j = s - i;
+                Jy(j, 1) = Jy(j, 1) + i .* exp_matG_p(s*(s+1)/2+j+1) .* chi.^(i-1) .* xi.^j;
+                Jy(j, 2) = Jy(j, 2) + j .* exp_matG_p(s*(s+1)/2+j+1) .* chi.^i .* xi.^(j-1);
+            end
+        end
     end
 elseif size(mats, 1) == 1 && n_point > 1
     Jy = 0;
