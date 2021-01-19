@@ -50,12 +50,6 @@ for s = 1: degree
     end
 end          
 
-for s = 1: degree
-    for i = s: -1: 0
-        Jy
-    end
-end
-
 if size(mats, 1) == 1 && n_point == 1
     Jy = zeros(n_contract, 2); 
     for j = 1: n_contract
