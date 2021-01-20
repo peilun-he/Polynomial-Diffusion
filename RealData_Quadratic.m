@@ -107,7 +107,7 @@ ylabel("Mean distance");
 n_grid = 2;
 n_para = 8;
 s = 1111;
-model = "Full3";
+model = "Polynomial";
 noise = "Gaussian";
 n_se = 13; % number of standard errors
 n_coe = 10; % number of model coefficients
