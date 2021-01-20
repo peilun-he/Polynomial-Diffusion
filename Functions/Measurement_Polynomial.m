@@ -16,15 +16,6 @@ if n_coe ~= 0
     par = par(1: end - n_coe); % model parameters
 end
 
-kappa_chi  = par(1);
-kappa_xi   = par(2);
-mu_xi      = par(3);
-sigma_chi  = par(4);
-sigma_xi   = par(5);
-rho        = par(6);
-lambda_chi = par(7);
-lambda_xi  = par(8);
-
 n_contract = size(mats, 2);
 n_point = size(x, 2); % number of points
 
