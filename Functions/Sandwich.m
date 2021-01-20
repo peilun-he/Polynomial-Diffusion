@@ -5,16 +5,12 @@ function [asyVar, message] = Sandwich(par, yt, mats, func_f, func_g, increment, 
 %   par: a vector of estimates of parameters
 %   yt: data
 %   mats: time to maturities 
-%   func_f: function f(x), which should return two values, f(x) and f'(x)
-%   func_g: function g(x), which should return two values, g(x) and g'(x)
+%   func_f: function f(x), which should take two arguments, xt and a vector of parameters, and return two values, f(x) and f'(x)
+%   func_g: function g(x), which should take three arguments, xt, a vector of parameters and maturities, and return two values, g(x) and g'(x)
 %   increment: the increment to calculate first / second order derivatives numerically
 %`  n_coe: the number of model coefficient to be estimated 
 %   model: SS2000 -> log(S_t) = chi_t + xi_t
-%          Quadratic -> S_t = chi_t^2 + xi_t^2  
-%          Lin-Qua -> S_t = chi_t^2 + xi_t^2 + chi_t + xi_t
-%          Mixed -> S_t = chi_t^2 + xi_t^2 + 2*chi_t*xi_t
-%          Full-Qua -> S_t = 1 + chi_t + xi_t + 0.5*chi_t^2 + chi_t*xi_t + 0.5*xi_t^2
-%          Full3 -> S_t = 1 + chi_t + xi_t + chi_t^2 + chi_t*xi_t + xi_t^2 + chi_t^3 + chi_t^2*xi_t + chi_t*xi_t^2 + xi_t^3
+%          Polynomial -> polynomial model, the degree should be specified by func_g
 %   filter: filtering function
 %   noise: Gaussian -> Gaussian noise for both process and measurement noise
 %          Gamma -> Gaussian process noise and Gamma measurement noise
@@ -42,7 +38,7 @@ for i = 1: n_par
                 [~, ll_table1, ~, ~, ~, ~] = SKF(par + incre_mat(i, :), yt, mats, 0, dt, false, "None"); 
                 [~, ll_table2, ~, ~, ~, ~] = SKF(par, yt, mats, 0, dt, false, "None");
                 [~, ll_table3, ~, ~, ~, ~] = SKF(par - incre_mat(i, :), yt, mats, 0, dt, false, "None");
-            elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua" || model == "Full3"
+            elseif model == "Polynomial"
                 [~, ll_table1, ~, ~] = filter(par + incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
                 [~, ll_table2, ~, ~] = filter(par, yt, mats, func_f, func_g, dt, n_coe, noise); 
                 [~, ll_table3, ~, ~] = filter(par - incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
@@ -57,7 +53,7 @@ for i = 1: n_par
                 [~, ll_table2, ~, ~, ~, ~] = SKF(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, 0, dt, false, "None");
                 [~, ll_table3, ~, ~, ~, ~] = SKF(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, 0, dt, false, "None");
                 [~, ll_table4, ~, ~, ~, ~] = SKF(par - incre_mat(i, :) - incre_mat(j, :), yt, mats, 0, dt, false, "None");
-            elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua" || model == "Full3"
+            elseif model == "Polynomial"
                 [~, ll_table1, ~, ~] = filter(par + incre_mat(i, :) + incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise);
                 [~, ll_table2, ~, ~] = filter(par + incre_mat(i, :) - incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise); 
                 [~, ll_table3, ~, ~] = filter(par - incre_mat(i, :) + incre_mat(j, :), yt, mats, func_f, func_g, dt, n_coe, noise); 
@@ -73,7 +69,7 @@ for i = 1: n_par
     if model == "SS2000"
         [~, ll_table5, ~, ~, ~, ~] = SKF(par + incre_mat(i, :), yt, mats, 0, dt, false, "None"); 
         [~, ll_table6, ~, ~, ~, ~] = SKF(par - incre_mat(i, :), yt, mats, 0, dt, false, "None");
-    elseif model == "Quadratic" || model == "Lin-Qua" || model == "Mixed" || model == "Full-Qua" || model == "Full3"
+    elseif model == "Polynomial"
         [~, ll_table5, ~, ~] = filter(par + incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
         [~, ll_table6, ~, ~] = filter(par - incre_mat(i, :), yt, mats, func_f, func_g, dt, n_coe, noise);
     else
