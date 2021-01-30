@@ -120,8 +120,10 @@ filter = @UKF3;
 % Bounds and constraints
 parL = [10^(-5), 10^(-5),   -10,   0.01,   0.01,  -0.9999, -10, -10, repelem(10^(-5), n_se), repelem(-10, n_coe)];
 parU = [      3,       3,    10,     10,     10,   0.9999,  10,  10,       repelem(1, n_se),  repelem(10, n_coe)];
-A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe)]; % A*x <= b
-b = 0;
+A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe);
+     0, -50, 1, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe);
+     0, -50, -1, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe)]; % A*x <= b
+b = [0; 0; 0];
 Aeq = []; % Equal constraints: Aeq*x=beq
 beq = []; 
 c = @(x) []; % non-linear constraints: c(x) <= 0
