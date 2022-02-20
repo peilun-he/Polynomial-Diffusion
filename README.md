@@ -5,7 +5,14 @@ Author: Peilun He
 
 Last update: 20 Feb 2022
 
-## Descriptions of some global setups
+## Descriptions of files & folders 
+Main.m: the main function for SS2000 model and PD model. 
+
+Functions: all relevant functions. 
+
+OtherTests: some functions for other purposes, not directly relevant to SS2000 model and PD model. 
+
+## Descriptions of global setups
 model: define which model to use, "SS2000" or "PD".
   SS2000 -> Schwartz & Smith two factor model
   PD -> polynomial diffusion model
