@@ -107,20 +107,23 @@ ylabel("Mean distance");
 n_grid = 2;
 n_para = 8;
 s = 1111;
-model = "Full3";
+model = "Polynomial";
 noise = "Gaussian";
 n_se = 13; % number of standard errors
 n_coe = 10; % number of model coefficients
+degree = 2; % degree of polynomial
 
 func_f = @(xt, par) State_Linear(xt, par, dt); 
-func_g = @(xt, par, mats) Measurement_Polynomial3(xt, par, mats, n_coe, model);  
+func_g = @(xt, par, mats) Measurement_Polynomial(xt, par, mats, degree, n_coe);  
 filter = @UKF3;
 
 % Bounds and constraints
 parL = [10^(-5), 10^(-5),   -10,   0.01,   0.01,  -0.9999, -10, -10, repelem(10^(-5), n_se), repelem(-10, n_coe)];
 parU = [      3,       3,    10,     10,     10,   0.9999,  10,  10,       repelem(1, n_se),  repelem(10, n_coe)];
-A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe)]; % A*x <= b
-b = 0;
+A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe);
+     0, -50, 1, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe);
+     0, -50, -1, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe)]; % A*x <= b
+b = [0; 0; 0];
 Aeq = []; % Equal constraints: Aeq*x=beq
 beq = []; 
 c = @(x) []; % non-linear constraints: c(x) <= 0
@@ -188,7 +191,7 @@ se = sqrt(diag(asyVar));
 %% Forecasting error
 [~, ~, xf, ~] = filter(best_est(1: end-1), yt_forecasting(:, contracts), mats_forecasting(:, contracts), func_f, func_g, dt, n_coe, noise);
 
-[yf, ~] = Measurement_Polynomial3(xf', best_est(1: end-1), mats_forecasting, n_coe, model);
+[yf, ~] = Measurement_Polynomial(xf', best_est(1: end-1), mats_forecasting, degree, n_coe);
 
 rmse_f_in = sqrt( mean( (yf(1: n_obs, :) - yt_forecasting(1: n_obs, :)).^2 ) ); % in-sample RMSE
 rmse_f_out = sqrt( mean( (yf(n_obs+1: end, :) - yt_forecasting(n_obs+1: end, :)).^2 ) ); % out-of-sample RMSE

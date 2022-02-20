@@ -10,8 +10,8 @@ function [nll, ll_table, table_xt_filter, table_xt_prediction] = UKF3(par, yt, m
 %   par: a vector of parameters
 %   yt: futures prices
 %   mats: time to maturities
-%   func_f: function f(x), which should return two values, f(x) and f'(x)
-%   func_g: function g(x), which should return two values, g(x) and g'(x)
+%   func_f: function f(x), which should take two arguments, xt and a vector of parameters, and return two values, f(x) and f'(x)
+%   func_g: function g(x), which should take three arguments, xt, a vector of parameters and maturities, and return two values, g(x) and g'(x)
 %   n_coe: the number of model coefficient to be estimated 
 %   noise: Gaussian -> Gaussian noise for both process and measurement noise
 %          Gamma -> Gaussian process noise and Gamma measurement noise
