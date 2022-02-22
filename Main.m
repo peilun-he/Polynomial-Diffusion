@@ -166,9 +166,9 @@ if interpolation
 end
 
 % Bounds
-parL = [10^(-5), 10^(-5),   -10,   0.01,   0.01,  -0.9999, -10, -10, repelem(10^(-5), n_se)]; % lower bounds of all parameters
-parU = [      3,       3,    10,     10,     10,   0.9999,  10,  10,       repelem(1, n_se)]; % upper bounds of all parameters 
-A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se)]; % unequal constraints: A*x<=b
+parL = [10^(-5), 10^(-5),   -10,   0.01,   0.01,  -0.9999, -10, -10, repelem(10^(-5), n_se), repelem(10, n_coe)]; % lower bounds of all parameters
+parU = [      3,       3,    10,     10,     10,   0.9999,  10,  10,       repelem(1, n_se), repelem(10, n_coe)]; % upper bounds of all parameters 
+A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe)]; % unequal constraints: A*x<=b
 b = 0;
 %A = [-1, 1, 0, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe);
 %     0, -50, 1, 0, 0, 0, 0, 0, repelem(0, n_se + n_coe);
@@ -223,16 +223,16 @@ parfor i = 1: n_grid^n_para
     i
     par0 = initial(i, :);
     options = optimset('TolFun',1e-06,'TolX',1e-06,'MaxIter',10000,'MaxFunEvals',20000);
-    %try
+    try
         if model == "SS2000"
             [par, fval, exitflag] = fmincon(@SKF, par0, A, b, Aeq, beq, parL, parU, nlcon, options, yt, mats, delivery_time, dt, false, "None");
         elseif model == "PD"
             [par, fval, exitflag] = fmincon(filter, par0, A, b, Aeq, beq, parL, parU, nlcon, options, yt, mats, func_f, func_g, dt, n_coe, noise);     
         end
         est(i, :) = [par, fval];
-    %catch
-        %est(i, :) = zeros(1, length(parL)+1);
-    %end
+    catch
+        est(i, :) = zeros(1, length(parL)+1);
+    end
 end
 
 error_index = est(:, end) == 0; % indices where an error is occured 
