@@ -145,7 +145,7 @@ elseif model == "PD"
     func_g = @(xt, par, mats) Measurement_Polynomial(xt, par, mats, degree, n_coe);  
 end
 
-%% Interpolation
+% Interpolation
 % Formula: y3 = y1 + (T3-T1)/(T2-T1) * (y2-y1)
 if interpolation
     T3 = 20: 20: 20*(n_contract - 1);
