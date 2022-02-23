@@ -34,6 +34,7 @@ n_grid = 2; % number of grid points
 n_para = 8; % number of parameters for grid search 
 s = 1111; % seed of random number 
 interpolation = false; % if using interpolated data 
+if_plot = false; % if creates plots
 
 % Read data
 dat = readtable("NaturalGas_Formatted.csv");
@@ -121,6 +122,9 @@ elseif model == "PD"
 else
     error("Incorrect model");
 end 
+
+date_est = date(index_est); % dates for estimation 
+date_fore = date(index_fore); % dates for forecasting
 
 mats = mats0(index_est(1): index_est(end), contracts_est); % time to maturities for estimation
 mats_forecasting = mats0(index_fore(1): index_fore(end), contracts_fore); % time to maturities for forecasting 
@@ -248,7 +252,7 @@ increment = 10^(-5);
 [asyVar, message] = Sandwich(best_est(1: end-1), yt, mats, func_f, func_g, increment, dt, n_coe, model, filter, noise);
 se = sqrt(diag(asyVar));
 
-% Forecasting error
+% Model performances
 if model == "SS2000"
     [~, ~, af, ~, ~, ~] = SKF(best_est(1: end-1), yt_forecasting(:, contracts_est), mats_forecasting(:, contracts_est), delivery_time, dt, false, "None");
 
@@ -267,12 +271,42 @@ if model == "SS2000"
 
     rmse_f_in = sqrt( mean( ( exp(yf(1: n_obs, :)) - exp(yt_forecasting(1: n_obs, :)) ).^2 ) ); % in-sample RMSE
     rmse_f_out = sqrt( mean( ( exp(yf(n_obs+1: end, :)) - exp(yt_forecasting(n_obs+1: end, :)) ).^2 ) ); % out-of-sample RMSE
+    re = abs( ( exp(yf) - exp(yt_forecasting) ) ./ exp(yt_forecasting) ); % relative error
 elseif model == "PD"
     [~, ~, xf, ~] = filter(best_est(1: end-1), yt_forecasting(:, contracts_est), mats_forecasting(:, contracts_est), func_f, func_g, dt, n_coe, noise);
     [yf, ~] = Measurement_Polynomial(xf', best_est(1: end-1), mats_forecasting, degree, n_coe);
     rmse_f_in = sqrt( mean( ( yf(1: n_obs, :) - yt_forecasting(1: n_obs, :) ).^2 ) ); % in-sample RMSE
     rmse_f_out = sqrt( mean( ( yf(n_obs+1: end, :) - yt_forecasting(n_obs+1: end, :) ).^2 ) ); % out-of-sample RMSE
+    re = abs( ( yf - yt_forecasting ) ./ yt_forecasting ); % relative error
 end
 
+% Plots 
+if if_plot
+    % time series of the 1st available contract
+    figure;
+    hold on;
+    if model == "SS2000"
+        plot(date_fore, exp(yt_forecasting(:, 1)));
+    elseif model == "PD"
+        plot(date_fore, yt_forecasting(:, 1));
+    end
+    xline(date_est(end), "-", datestr(date_est(end)), "LabelOrientation", "horizontal");
+    xlabel("Date");
+    ylabel("Futures price");
+    
+    % Mean relative error on each date
+    figure;
+    hold on;
+    plot(date_fore, mean(re, 2));
+    xline(date_est(end), "-", datestr(date_est(end)), "LabelOrientation", "horizontal");
+    xlabel("Date");
+    ylabel("Relative error");
+    
+    % Boxplot of relative error for each contract
+    figure;
+    hold on;
+    boxplot(re); 
+    xlabel("Contracts");
+end
 
 
